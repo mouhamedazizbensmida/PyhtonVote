@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import json
-import time
 
 st.title("Controlled API Request Sender")
 
@@ -27,7 +26,7 @@ except Exception as e:
 # API URL input
 api_url = st.text_input("API URL", "https://api.digitalcreatorawards.com/api/influencer/vote")
 
-# Session state variables
+# Session state initialization
 if "running" not in st.session_state:
     st.session_state.running = False
 if "success_count" not in st.session_state:
@@ -40,16 +39,44 @@ if "last_response" not in st.session_state:
     st.session_state.last_response = ""
 
 # Buttons
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 if col1.button("▶️ Start"):
     st.session_state.running = True
     st.session_state.status = "Running"
-    st.experimental_rerun()
 
 if col2.button("⏹️ Stop"):
     st.session_state.running = False
     st.session_state.status = "Stopped"
-    st.experimental_rerun()
+
+if col3.button("📤 Send Next Request") and st.session_state.running:
+    try:
+        response = requests.post(api_url, json=body, timeout=3000000)
+        st.session_state.last_response = response.text
+        if response.status_code == 200:
+            st.session_state.success_count += 1
+            st.session_state.failure_count = 0
+        else:
+            st.session_state.failure_count += 1
+
+        # Auto-stop after 10 consecutive failures
+        if st.session_state.failure_count >= 10:
+            st.session_state.running = False
+            st.session_state.status = "Stopped: 10 consecutive failures"
+        else:
+            st.session_state.status = "Running"
+
+    except requests.exceptions.ReadTimeout:
+        st.session_state.failure_count += 1
+        st.session_state.last_response = "Timeout!"
+        if st.session_state.failure_count >= 10:
+            st.session_state.running = False
+            st.session_state.status = "Stopped: 10 consecutive timeouts"
+    except Exception as e:
+        st.session_state.failure_count += 1
+        st.session_state.last_response = f"Error: {e}"
+        if st.session_state.failure_count >= 10:
+            st.session_state.running = False
+            st.session_state.status = "Stopped: 10 consecutive errors"
 
 # Status and counters
 st.subheader("Process Status")
@@ -59,55 +86,10 @@ st.metric("❌ Consecutive Failures", st.session_state.failure_count)
 
 # Last response
 st.subheader("Last Response")
-st.text(st.session_state.last_response)
-
-# Main loop
-if st.session_state.running:
-    placeholder = st.empty()
-    while st.session_state.running:
-        try:
-            response = requests.post(api_url, json=body, timeout=30)
-            status_code = response.status_code
-            response_text = response.text
-
-            if status_code == 200:
-                st.session_state.success_count += 1
-                st.session_state.failure_count = 0
-                st.session_state.last_response = response_text
-            else:
-                st.session_state.failure_count += 1
-                st.session_state.last_response = response_text
-
-            # Auto stop after 10 consecutive failures
-            if st.session_state.failure_count >= 10:
-                st.session_state.running = False
-                st.session_state.status = "Stopped: 10 consecutive failures"
-                break
-
-            # Update UI
-            with placeholder.container():
-                st.text(f"Last Response: {st.session_state.last_response}")
-                st.metric("✅ Successful Requests", st.session_state.success_count)
-                st.metric("❌ Consecutive Failures", st.session_state.failure_count)
-                st.text(f"Status: {st.session_state.status}")
-
-            # Wait a bit before sending next request (adjust if needed)
-            time.sleep(0.5)
-
-        except requests.exceptions.ReadTimeout:
-            st.session_state.failure_count += 1
-            st.session_state.last_response = "Timeout!"
-            if st.session_state.failure_count >= 10:
-                st.session_state.running = False
-                st.session_state.status = "Stopped: 10 consecutive failures due to timeout"
-                break
-        except Exception as e:
-            st.session_state.failure_count += 1
-            st.session_state.last_response = f"Error: {e}"
-            if st.session_state.failure_count >= 10:
-                st.session_state.running = False
-                st.session_state.status = "Stopped: 10 consecutive exceptions"
-                break
+try:
+    st.json(json.loads(st.session_state.last_response))
+except:
+    st.text(st.session_state.last_response)
 
 
 # import streamlit as st
