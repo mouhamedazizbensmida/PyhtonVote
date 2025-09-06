@@ -53,13 +53,19 @@ if st.session_state.get("running", False):
             response = requests.post(API_URL, json=body, timeout=10)
             status_code = response.status_code
 
+            # Try to parse JSON, fallback to text
+            try:
+                response_content = response.json()
+            except Exception:
+                response_content = response.text
+
             if status_code == 200:
                 st.session_state["success_count"] += 1
                 st.session_state["failure_count"] = 0
-                log_entry = f"✅ 200 OK - Success #{st.session_state['success_count']}"
+                log_entry = f"✅ 200 OK - Success #{st.session_state['success_count']} | Response: {response_content}"
             else:
                 st.session_state["failure_count"] += 1
-                log_entry = f"❌ {status_code} - Failure #{st.session_state['failure_count']}"
+                log_entry = f"❌ {status_code} - Failure #{st.session_state['failure_count']} | Response: {response_content}"
 
             st.session_state["logs"].append(log_entry)
 
@@ -79,9 +85,12 @@ if st.session_state.get("running", False):
             with placeholder.container():
                 st.metric("✅ Successful requests", st.session_state["success_count"])
                 st.metric("❌ Consecutive failures", st.session_state["failure_count"])
-                st.subheader("Logs")
-                for log in st.session_state["logs"][-10:]:  # show last 10 logs
+                st.subheader("Logs (last 10)")
+                for log in st.session_state["logs"][-10:]:
                     st.text(log)
+
+                st.subheader("Last Response")
+                st.json(response_content if isinstance(response_content, dict) else {"response": response_content})
 
         except Exception as e:
             st.session_state["failure_count"] += 1
