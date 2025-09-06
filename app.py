@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import json
 
-st.title("Send API Request Once")
+st.title("Send API Request and View Response")
 
 # Default request body
 default_body = {
@@ -30,12 +30,19 @@ api_url = st.text_input("API URL", "https://api.digitalcreatorawards.com/api/inf
 if st.button("📤 Send Request"):
     try:
         response = requests.post(api_url, json=body, timeout=10)
+        
+        # Show Status
         st.success(f"Request sent! Status code: {response.status_code}")
 
-        # Show raw response
-        st.subheader("Response")
+        # Show Headers
+        st.subheader("Response Headers")
+        for key, value in response.headers.items():
+            st.text(f"{key}: {value}")
+
+        # Show Body
+        st.subheader("Response Body")
         try:
-            st.json(response.json())  # pretty-print JSON if possible
+            st.json(response.json())  # pretty-print JSON
         except Exception:
             st.text(response.text)    # fallback to raw text
 
