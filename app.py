@@ -4,7 +4,7 @@ import json
 
 st.title("Automatic POST Request Sender")
 
-# Default request body
+# Editable JSON body
 default_body = {
     "data": {
         "influencer_id": 1564,
@@ -24,16 +24,17 @@ except Exception as e:
 # API URL
 api_url = st.text_input("API URL", "https://api.digitalcreatorawards.com/api/influencer/vote")
 
-# Session state initialization
-for key, default in [
-    ("running", False),
-    ("success_count", 0),
-    ("failure_count", 0),
-    ("last_response", ""),
-    ("status", "Idle")
-]:
-    if key not in st.session_state:
-        st.session_state[key] = default
+# Initialize session state
+if "running" not in st.session_state:
+    st.session_state.running = False
+if "success_count" not in st.session_state:
+    st.session_state.success_count = 0
+if "failure_count" not in st.session_state:
+    st.session_state.failure_count = 0
+if "status" not in st.session_state:
+    st.session_state.status = "Idle"
+if "last_response" not in st.session_state:
+    st.session_state.last_response = ""
 
 # Buttons
 col1, col2 = st.columns(2)
@@ -44,7 +45,7 @@ if col2.button("⏹️ Stop"):
     st.session_state.running = False
     st.session_state.status = "Stopped"
 
-# Display status and counters
+# Display counters and status
 st.subheader("Process Status")
 st.text(st.session_state.status)
 st.metric("✅ Successful Requests", st.session_state.success_count)
@@ -57,7 +58,7 @@ try:
 except:
     st.text(st.session_state.last_response)
 
-# Non-blocking automatic request
+# Automatic request sending
 if st.session_state.running:
     try:
         response = requests.post(api_url, json=body, timeout=3000000)
@@ -73,6 +74,8 @@ if st.session_state.running:
         if st.session_state.failure_count >= 10:
             st.session_state.running = False
             st.session_state.status = "Stopped: 10 consecutive failures"
+        else:
+            st.session_state.status = "Running"
 
     except requests.exceptions.ReadTimeout:
         st.session_state.failure_count += 1
@@ -86,6 +89,9 @@ if st.session_state.running:
         if st.session_state.failure_count >= 10:
             st.session_state.running = False
             st.session_state.status = "Stopped: 10 consecutive errors"
+
+    # Automatically rerun the app every second
+    st.experimental_rerun()
 
 
 
