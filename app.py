@@ -1,11 +1,10 @@
 import streamlit as st
 import requests
 import json
-import time
 
 st.title("Automatic POST Request Sender")
 
-# Editable JSON body
+# Default request body
 default_body = {
     "data": {
         "influencer_id": 1564,
@@ -30,8 +29,8 @@ for key, default in [
     ("running", False),
     ("success_count", 0),
     ("failure_count", 0),
-    ("status", "Idle"),
-    ("last_response", "")
+    ("last_response", ""),
+    ("status", "Idle")
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -45,23 +44,23 @@ if col2.button("⏹️ Stop"):
     st.session_state.running = False
     st.session_state.status = "Stopped"
 
-# Display status
+# Display status and counters
 st.subheader("Process Status")
 st.text(st.session_state.status)
 st.metric("✅ Successful Requests", st.session_state.success_count)
 st.metric("❌ Consecutive Failures", st.session_state.failure_count)
 
-# Last response
+# Display last response
 st.subheader("Last Response")
 try:
     st.json(json.loads(st.session_state.last_response))
 except:
     st.text(st.session_state.last_response)
 
-# Automatic request sending (tick-based using session state)
+# Non-blocking automatic request
 if st.session_state.running:
     try:
-        response = requests.post(api_url, json=body, timeout=300000)
+        response = requests.post(api_url, json=body, timeout=3000000)
         st.session_state.last_response = response.text
 
         if response.status_code == 200:
@@ -74,8 +73,6 @@ if st.session_state.running:
         if st.session_state.failure_count >= 10:
             st.session_state.running = False
             st.session_state.status = "Stopped: 10 consecutive failures"
-        else:
-            st.session_state.status = "Running"
 
     except requests.exceptions.ReadTimeout:
         st.session_state.failure_count += 1
@@ -89,10 +86,6 @@ if st.session_state.running:
         if st.session_state.failure_count >= 10:
             st.session_state.running = False
             st.session_state.status = "Stopped: 10 consecutive errors"
-
-    # Sleep 1 second and rerun to send the next request
-    time.sleep(1)
-    st.experimental_rerun()
 
 
 
