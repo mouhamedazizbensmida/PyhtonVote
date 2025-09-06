@@ -64,7 +64,7 @@ st_autorefresh(interval=1000, key="auto_refresh")  # 1 second
 # Automatic request sending
 if st.session_state.running:
     try:
-        response = requests.post(api_url, json=body, timeout=3000000)
+        response = requests.post(api_url, json=body, timeout=20000)
         st.session_state.last_response = response.text
 
         if response.status_code == 200:
