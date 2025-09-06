@@ -1,9 +1,8 @@
 import streamlit as st
 import requests
 import json
-import time
 
-st.title("Automatic POST Request Sender (Live Count)")
+st.title("Automatic POST Request Sender")
 
 # Default request body
 default_body = {
@@ -15,7 +14,6 @@ default_body = {
 }
 
 # Editable JSON input
-st.subheader("Request Body")
 body_text = st.text_area("Edit JSON body:", json.dumps(default_body, indent=4), height=200)
 
 try:
@@ -24,7 +22,7 @@ except Exception as e:
     st.error(f"Invalid JSON: {e}")
     st.stop()
 
-# API URL input
+# API URL
 api_url = st.text_input("API URL", "https://api.digitalcreatorawards.com/api/influencer/vote")
 
 # Session state
@@ -39,12 +37,11 @@ if "status" not in st.session_state:
 if "last_response" not in st.session_state:
     st.session_state.last_response = ""
 
-# Start / Stop buttons
+# Buttons
 col1, col2 = st.columns(2)
 if col1.button("▶️ Start"):
     st.session_state.running = True
     st.session_state.status = "Running"
-
 if col2.button("⏹️ Stop"):
     st.session_state.running = False
     st.session_state.status = "Stopped"
@@ -62,7 +59,7 @@ try:
 except:
     st.text(st.session_state.last_response)
 
-# Automatic sending logic (non-blocking)
+# Tick-based automatic request sending
 if st.session_state.running:
     try:
         response = requests.post(api_url, json=body, timeout=30000000)
@@ -74,17 +71,10 @@ if st.session_state.running:
         else:
             st.session_state.failure_count += 1
 
-        # Auto-stop after 10 consecutive failures
+        # Stop after 10 consecutive failures
         if st.session_state.failure_count >= 10:
             st.session_state.running = False
             st.session_state.status = "Stopped: 10 consecutive failures"
-        else:
-            st.session_state.status = "Running"
-
-        # Refresh page automatically after short delay to send next request
-        if st.session_state.running:
-            time.sleep(0.5)
-            st.experimental_rerun()
 
     except requests.exceptions.ReadTimeout:
         st.session_state.failure_count += 1
@@ -92,16 +82,16 @@ if st.session_state.running:
         if st.session_state.failure_count >= 10:
             st.session_state.running = False
             st.session_state.status = "Stopped: 10 consecutive timeouts"
-        else:
-            st.experimental_rerun()
     except Exception as e:
         st.session_state.failure_count += 1
         st.session_state.last_response = f"Error: {e}"
         if st.session_state.failure_count >= 10:
             st.session_state.running = False
             st.session_state.status = "Stopped: 10 consecutive errors"
-        else:
-            st.experimental_rerun()
+
+    # Auto-refresh the page every 1 second to send the next request
+    st.experimental_set_query_params(tick=str(st.session_state.success_count))
+    st_autorefresh = st.experimental_rerun  # placeholder to indicate refresh
 
 
 # import streamlit as st
