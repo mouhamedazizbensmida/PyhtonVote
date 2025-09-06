@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import json
+from streamlit_autorefresh import st_autorefresh
 
 st.title("Automatic POST Request Sender")
 
@@ -25,18 +26,17 @@ except Exception as e:
 api_url = st.text_input("API URL", "https://api.digitalcreatorawards.com/api/influencer/vote")
 
 # Initialize session state
-if "running" not in st.session_state:
-    st.session_state.running = False
-if "success_count" not in st.session_state:
-    st.session_state.success_count = 0
-if "failure_count" not in st.session_state:
-    st.session_state.failure_count = 0
-if "status" not in st.session_state:
-    st.session_state.status = "Idle"
-if "last_response" not in st.session_state:
-    st.session_state.last_response = ""
+for key, default in [
+    ("running", False),
+    ("success_count", 0),
+    ("failure_count", 0),
+    ("last_response", ""),
+    ("status", "Idle")
+]:
+    if key not in st.session_state:
+        st.session_state[key] = default
 
-# Buttons
+# Start/Stop buttons
 col1, col2 = st.columns(2)
 if col1.button("▶️ Start"):
     st.session_state.running = True
@@ -45,7 +45,7 @@ if col2.button("⏹️ Stop"):
     st.session_state.running = False
     st.session_state.status = "Stopped"
 
-# Display counters and status
+# Display status and counters
 st.subheader("Process Status")
 st.text(st.session_state.status)
 st.metric("✅ Successful Requests", st.session_state.success_count)
@@ -57,6 +57,9 @@ try:
     st.json(json.loads(st.session_state.last_response))
 except:
     st.text(st.session_state.last_response)
+
+# Auto-refresh every second
+st_autorefresh(interval=1000, key="auto_refresh")  # 1 second
 
 # Automatic request sending
 if st.session_state.running:
@@ -89,9 +92,6 @@ if st.session_state.running:
         if st.session_state.failure_count >= 10:
             st.session_state.running = False
             st.session_state.status = "Stopped: 10 consecutive errors"
-
-    # Automatically rerun the app every second
-    st.experimental_rerun()
 
 
 
