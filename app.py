@@ -48,7 +48,6 @@ if col2.button("⏹️ Stop"):
     st.session_state.running = False
     st.session_state.status = "Stopped"
 
-
 # Last response
 st.subheader("Last Response")
 try:
@@ -96,6 +95,7 @@ if st.session_state.running:
                 st.session_state.running = False
                 st.session_state.status = "Stopped: 10 consecutive timeouts"
                 break
+
         except Exception as e:
             st.session_state.failure_count += 1
             st.session_state.last_response = f"Error: {e}"
@@ -103,6 +103,3 @@ if st.session_state.running:
                 st.session_state.running = False
                 st.session_state.status = "Stopped: 10 consecutive errors"
                 break
-
-
-
